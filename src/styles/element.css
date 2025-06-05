@@ -1,0 +1,12 @@
+:root {
+  --el-color-primary: #07c160 !important;
+  --el-color-primary-light-3: #4cd48a !important;
+  --el-color-primary-light-5: #7ee0a9 !important;
+  --el-color-primary-light-7: #b0eccd !important;
+  --el-color-primary-light-9: #e6f9ef !important;
+  --el-color-primary-dark-2: #059a4c !important;
+  --el-button-hover-bg-color: #4cd48a !important;
+  --el-button-hover-border-color: #4cd48a !important;
+  --el-button-active-bg-color: #059a4c !important;
+  --el-button-active-border-color: #059a4c !important;
+}

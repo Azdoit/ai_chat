@@ -1,0 +1,25 @@
+@import './transition.css';
+@import './element.css';
+@import 'tailwindcss';
+@plugin 'tailwind-scrollbar' {
+  nocompatible: true;
+  preferredstrategy: 'pseudoelements';
+}
+
+body,
+html {
+  margin: 0;
+  height: 100%;
+  width: 100% !important;
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+}
+
+
+.cflex {
+  @apply flex justify-center items-center;
+}
