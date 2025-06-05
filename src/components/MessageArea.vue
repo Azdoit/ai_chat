@@ -8,7 +8,7 @@
         class="h-16 w-full bg-white flex items-center justify-between px-10 border-b border-gray-200 shadow-sm"
       >
         <span>联系人xxx</span>
-        <img src="../assets/imgs/robot.png" class="w-6 h-6 cursor-pointer hover:scale-110" />
+        <img src="../assets/imgs/robot.png" class="w-6 h-6 cursor-pointer hover:scale-110" @click="addToAI"/>
       </div>
       <div class="flex-1 overflow-y-auto">
         <div
