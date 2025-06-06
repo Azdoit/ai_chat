@@ -8,7 +8,11 @@
         class="h-16 w-full bg-white flex items-center justify-between px-10 border-b border-gray-200 shadow-sm"
       >
         <span>联系人xxx</span>
-        <img src="../assets/imgs/robot.png" class="w-6 h-6 cursor-pointer hover:scale-110" @click="addToAI"/>
+        <img
+          src="../assets/imgs/robot.png"
+          class="w-6 h-6 cursor-pointer hover:scale-110"
+          @click="addToAI"
+        />
       </div>
       <div class="flex-1 overflow-y-auto">
         <div
@@ -28,10 +32,11 @@
                   : 'border-gray-300'
               "
             >
-              <i
+              <img
                 v-if="selectedMessages.includes(index)"
-                class="fas fa-check text-white text-xs"
-              ></i>
+                src="../assets/imgs/check.png"
+                class="w-3 h-3"
+              />
             </div>
           </div>
 
@@ -118,7 +123,7 @@
               @click="forwardSelected"
               title="逐条转发"
             >
-              <i class="fas fa-share-alt text-gray-600 text-2xl"></i>
+              <img src="../assets/imgs/singleShare.png" class="w-6 h-6" />
             </button>
             <span class="text-sm text-gray-600">逐条转发</span>
           </div>
@@ -129,7 +134,7 @@
               @click="mergeForward"
               title="合并转发"
             >
-              <i class="fas fa-object-group text-gray-600 text-2xl"></i>
+              <img src="../assets/imgs/combineShare.png" class="w-6 h-6" />
             </button>
             <span class="text-sm text-gray-600">合并转发</span>
           </div>
@@ -140,7 +145,7 @@
               @click="batchSave"
               title="批量保存"
             >
-              <i class="fas fa-download text-gray-600 text-2xl"></i>
+              <img src="../assets/imgs/download.png" class="w-6 h-6" />
             </button>
             <span class="text-sm text-gray-600">批量保存</span>
           </div>
@@ -151,7 +156,7 @@
               @click="addToAI"
               title="添加到AI助手"
             >
-              <i class="fas fa-robot text-gray-600 text-2xl"></i>
+              <img src="../assets/imgs/AI_assistant.png" class="w-6 h-6" />
             </button>
             <span class="text-sm text-gray-600">添加到AI助手</span>
           </div>
@@ -162,7 +167,7 @@
               @click="addToFavorites"
               title="收藏"
             >
-              <i class="fas fa-star text-gray-600 text-2xl"></i>
+              <img src="../assets/imgs/collect.png" class="w-6 h-6" />
             </button>
             <span class="text-sm text-gray-600">收藏</span>
           </div>
@@ -173,7 +178,7 @@
               @click="deleteMessages"
               title="删除"
             >
-              <i class="fas fa-trash text-gray-600 text-2xl"></i>
+              <img src="../assets/imgs/delete.png" class="w-6 h-6" />
             </button>
             <span class="text-sm text-gray-600">删除</span>
           </div>
@@ -184,7 +189,7 @@
               @click="reportMessages"
               title="举报"
             >
-              <i class="fas fa-flag text-gray-600 text-2xl"></i>
+              <img src="../assets/imgs/report.png" class="w-6 h-6" />
             </button>
             <span class="text-sm text-gray-600">举报</span>
           </div>
@@ -196,7 +201,7 @@
             @click="cancelSelect"
             title="取消"
           >
-            <i class="fas fa-times text-gray-600 text-2xl"></i>
+            <img src="../assets/imgs/cancel.png" class="w-6 h-6" />
           </button>
         </div>
       </div>
@@ -220,7 +225,7 @@
             <div
               class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0"
             >
-              <i class="fas fa-robot text-white"></i>
+              <img src="../assets/imgs/robot2.png" class="w-6 h-6" />
             </div>
             <div class="flex-1">
               <div class="flex justify-between items-start">
@@ -232,7 +237,7 @@
                   @click="applyToInput(msg.text)"
                   title="应用到输入框"
                 >
-                  <i class="fas fa-arrow-down mr-1"></i>应用
+                  应用
                 </button>
               </div>
               <div class="bg-white rounded-lg p-3 text-sm shadow-sm" v-html="msg.text"></div>
@@ -265,7 +270,7 @@
           <div
             class="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0"
           >
-            <i class="fas fa-robot text-white"></i>
+            <img src="../assets/imgs/robot2.png" class="w-6 h-6" />
           </div>
           <div class="bg-white rounded-lg p-3 text-sm shadow-sm">
             <span class="inline-flex space-x-1">
@@ -417,7 +422,7 @@ const handleInput = (e) => {
 }
 
 const handleEnter = (e) => {
-  if(inputContent.value.trim()==='')return
+  if (inputContent.value.trim() === '') return
   if (e.shiftKey) {
     // 如果按住shift+enter，插入换行
     document.execCommand('insertLineBreak')
