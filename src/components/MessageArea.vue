@@ -371,7 +371,7 @@ const messages = ref([
     ne: 'xxx',
   },
   {
-    text: '对了，还有一个问题，关于出口退税的流程是怎样的？',
+    text: '对了，还有一个问题，关于出口退税的流程是怎么样的？',
     isMe: false,
     time: '10:33 ',
     ne: 'xxx',
