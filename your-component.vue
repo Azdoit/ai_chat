@@ -74,8 +74,7 @@
 
 <script setup lang="ts">
 import Ruler from './components/Ruler.vue'
-import { ref, computed, watch, onMounted } from 'vue'
-import GL from 'glfx'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   camera: {
@@ -144,168 +143,252 @@ watch(
 
 const imgRef = ref<HTMLImageElement | null>(null)
 const canvasRef = ref<HTMLCanvasElement | null>(null)
-const fxCanvas = ref<any>(null)
 
-onMounted(() => {
-  fxCanvas.value = GL.canvas()
-})
-
-// 矩阵乘法函数
-function multiplyMatrix(a: number[][], b: number[][]): number[][] {
-  const result = []
-  for (let i = 0; i < a.length; i++) {
-    result[i] = []
-    for (let j = 0; j < b[0].length; j++) {
-      let sum = 0
-      for (let k = 0; k < b.length; k++) {
-        sum += a[i][k] * b[k][j]
-      }
-      result[i][j] = sum
-    }
-  }
-  return result
-}
-
-// 创建旋转矩阵
-function createRotationMatrix(rotateX: number, rotateY: number, rotateZ: number) {
+// 3D点变换
+function transform3D(x: number, y: number, z: number, rotateX: number, rotateY: number, rotateZ: number) {
+  // 转换为弧度
   const rx = (rotateX * Math.PI) / 180
   const ry = (rotateY * Math.PI) / 180
   const rz = (rotateZ * Math.PI) / 180
 
-  // X轴旋转矩阵
-  const Rx = [
-    [1, 0, 0, 0],
-    [0, Math.cos(rx), -Math.sin(rx), 0],
-    [0, Math.sin(rx), Math.cos(rx), 0],
-    [0, 0, 0, 1]
-  ]
+  // 绕X轴旋转
+  let y1 = y * Math.cos(rx) - z * Math.sin(rx)
+  let z1 = y * Math.sin(rx) + z * Math.cos(rx)
+  
+  // 绕Y轴旋转
+  let x1 = x * Math.cos(ry) + z1 * Math.sin(ry)
+  let z2 = -x * Math.sin(ry) + z1 * Math.cos(ry)
+  
+  // 绕Z轴旋转
+  let x2 = x1 * Math.cos(rz) - y1 * Math.sin(rz)
+  let y2 = x1 * Math.sin(rz) + y1 * Math.cos(rz)
 
-  // Y轴旋转矩阵
-  const Ry = [
-    [Math.cos(ry), 0, Math.sin(ry), 0],
-    [0, 1, 0, 0],
-    [-Math.sin(ry), 0, Math.cos(ry), 0],
-    [0, 0, 0, 1]
-  ]
-
-  // Z轴旋转矩阵
-  const Rz = [
-    [Math.cos(rz), -Math.sin(rz), 0, 0],
-    [Math.sin(rz), Math.cos(rz), 0, 0],
-    [0, 0, 1, 0],
-    [0, 0, 0, 1]
-  ]
-
-  // 组合旋转矩阵 (顺序: Z * Y * X)
-  return multiplyMatrix(multiplyMatrix(Rz, Ry), Rx)
-}
-
-// 应用变换矩阵到点
-function transformPoint(point: number[], matrix: number[][]) {
-  const [x, y, z, w] = point
-  return [
-    matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z + matrix[0][3] * w,
-    matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z + matrix[1][3] * w,
-    matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z + matrix[2][3] * w,
-    matrix[3][0] * x + matrix[3][1] * y + matrix[3][2] * z + matrix[3][3] * w
-  ]
+  return [x2, y2, z2]
 }
 
 // 透视投影
-function perspectiveProject(point: number[], perspective: number = 1000) {
-  const [x, y, z] = point
-  const scale = perspective / (perspective + z)
+function perspectiveProject(x: number, y: number, z: number, perspective: number = 1000) {
+  const scale = perspective / (perspective - z)
   return [x * scale, y * scale]
 }
 
-function getTransformedCorners(
-  width: number,
-  height: number,
-  rotateX: number,
-  rotateY: number,
-  rotateZ: number
-) {
-  // 创建旋转矩阵
-  const rotationMatrix = createRotationMatrix(rotateX, rotateY, rotateZ)
+// 获取四个角的变换后坐标
+function getTransformedCorners(width: number, height: number, rotateX: number, rotateY: number, rotateZ: number) {
+  const halfW = width / 2
+  const halfH = height / 2
   
-  // 四个角的3D坐标（以图片中心为原点）
-  const halfWidth = width / 2
-  const halfHeight = height / 2
-  
+  // 四个角的原始坐标（相对于中心）
   const corners = [
-    [-halfWidth, -halfHeight, 0, 1], // 左上
-    [halfWidth, -halfHeight, 0, 1],  // 右上
-    [-halfWidth, halfHeight, 0, 1],  // 左下
-    [halfWidth, halfHeight, 0, 1]    // 右下
+    [-halfW, -halfH, 0], // 左上
+    [halfW, -halfH, 0],  // 右上
+    [-halfW, halfH, 0],  // 左下
+    [halfW, halfH, 0]    // 右下
   ]
-
-  // 应用旋转变换
-  const transformedCorners = corners.map(corner => transformPoint(corner, rotationMatrix))
   
-  // 透视投影并转换回图片坐标系
-  return transformedCorners.map(([x, y, z]) => {
-    const [projX, projY] = perspectiveProject([x, y, z])
-    return [projX + halfWidth, projY + halfHeight]
+  // 应用3D变换和透视投影
+  return corners.map(([x, y, z]) => {
+    const [tx, ty, tz] = transform3D(x, y, z, rotateX, rotateY, rotateZ)
+    const [px, py] = perspectiveProject(tx, ty, tz)
+    return [px + halfW, py + halfH]
   })
+}
+
+// 双线性插值
+function bilinearInterpolate(
+  x: number, 
+  y: number, 
+  x1: number, 
+  y1: number, 
+  x2: number, 
+  y2: number,
+  q11: number[], 
+  q12: number[], 
+  q21: number[], 
+  q22: number[]
+): number[] {
+  const r1 = [
+    q11[0] * (x2 - x) / (x2 - x1) + q21[0] * (x - x1) / (x2 - x1),
+    q11[1] * (x2 - x) / (x2 - x1) + q21[1] * (x - x1) / (x2 - x1),
+    q11[2] * (x2 - x) / (x2 - x1) + q21[2] * (x - x1) / (x2 - x1),
+    q11[3] * (x2 - x) / (x2 - x1) + q21[3] * (x - x1) / (x2 - x1)
+  ]
+  
+  const r2 = [
+    q12[0] * (x2 - x) / (x2 - x1) + q22[0] * (x - x1) / (x2 - x1),
+    q12[1] * (x2 - x) / (x2 - x1) + q22[1] * (x - x1) / (x2 - x1),
+    q12[2] * (x2 - x) / (x2 - x1) + q22[2] * (x - x1) / (x2 - x1),
+    q12[3] * (x2 - x) / (x2 - x1) + q22[3] * (x - x1) / (x2 - x1)
+  ]
+  
+  return [
+    r1[0] * (y2 - y) / (y2 - y1) + r2[0] * (y - y1) / (y2 - y1),
+    r1[1] * (y2 - y) / (y2 - y1) + r2[1] * (y - y1) / (y2 - y1),
+    r1[2] * (y2 - y) / (y2 - y1) + r2[2] * (y - y1) / (y2 - y1),
+    r1[3] * (y2 - y) / (y2 - y1) + r2[3] * (y - y1) / (y2 - y1)
+  ]
+}
+
+// 检查点是否在四边形内
+function isPointInQuadrilateral(x: number, y: number, corners: number[][]): boolean {
+  const [p1, p2, p3, p4] = corners
+  
+  // 使用重心坐标判断
+  function sign(p1: number[], p2: number[], p3: number[]): number {
+    return (p1[0] - p3[0]) * (p2[1] - p3[1]) - (p2[0] - p3[0]) * (p1[1] - p3[1])
+  }
+  
+  const d1 = sign([x, y], p1, p2)
+  const d2 = sign([x, y], p2, p4)
+  const d3 = sign([x, y], p4, p3)
+  const d4 = sign([x, y], p3, p1)
+  
+  const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0) || (d4 < 0)
+  const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0) || (d4 > 0)
+  
+  return !(hasNeg && hasPos)
+}
+
+// 透视变换的逆变换，将输出坐标映射回输入坐标
+function inversePerspectiveMapping(
+  destX: number,
+  destY: number,
+  srcCorners: number[][],
+  destCorners: number[][]
+): number[] | null {
+  // 使用双线性插值的逆变换
+  const [tl, tr, bl, br] = destCorners
+  const [srcTl, srcTr, srcBl, srcBr] = srcCorners
+  
+  // 计算在目标四边形中的相对位置
+  const width = Math.max(tr[0] - tl[0], br[0] - bl[0])
+  const height = Math.max(bl[1] - tl[1], br[1] - tr[1])
+  
+  if (width === 0 || height === 0) return null
+  
+  // 简化的逆映射（适用于轻微变换）
+  const u = (destX - tl[0]) / width
+  const v = (destY - tl[1]) / height
+  
+  // 双线性插值计算源坐标
+  const srcX = srcTl[0] * (1 - u) * (1 - v) + 
+               srcTr[0] * u * (1 - v) + 
+               srcBl[0] * (1 - u) * v + 
+               srcBr[0] * u * v
+               
+  const srcY = srcTl[1] * (1 - u) * (1 - v) + 
+               srcTr[1] * u * (1 - v) + 
+               srcBl[1] * (1 - u) * v + 
+               srcBr[1] * u * v
+  
+  return [srcX, srcY]
 }
 
 // 导出校正后图片的方法
 function getCorrectedImage(rotateX: number, rotateY: number, rotateZ: number): string | null {
   const img = imgRef.value
-  if (!img || !fxCanvas.value) return null
-
+  const canvas = canvasRef.value
+  
+  if (!img || !canvas) return null
+  
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return null
+  
   const width = img.naturalWidth
   const height = img.naturalHeight
-
-  // 设置canvas尺寸
-  fxCanvas.value.width = width
-  fxCanvas.value.height = height
-
-  try {
-    // 计算四个角的新坐标
-    const corners = getTransformedCorners(width, height, rotateX, rotateY, rotateZ)
-    const [tl, tr, bl, br] = corners
-
-    // 原图四个角的坐标
-    const originalCorners = [0, 0, width, 0, 0, height, width, height]
-    
-    // 变换后的四个角坐标
-    const transformedCorners = [...tl, ...tr, ...bl, ...br]
-
-    // 创建纹理并做透视变换
-    const texture = fxCanvas.value.texture(img)
-    fxCanvas.value
-      .draw(texture)
-      .perspective(originalCorners, transformedCorners)
-      .update()
-
-    return fxCanvas.value.toDataURL('image/png')
-  } catch (error) {
-    console.error('导出图片时发生错误:', error)
-    
-    // 如果透视变换失败，尝试使用简单的canvas 2D变换
-    const canvas = canvasRef.value
-    if (!canvas) return null
-    
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return null
-    
-    canvas.width = width
-    canvas.height = height
-    
-    ctx.save()
-    ctx.translate(width / 2, height / 2)
-    ctx.rotate((rotateZ * Math.PI) / 180)
-    ctx.scale(
-      Math.cos((rotateY * Math.PI) / 180),
-      Math.cos((rotateX * Math.PI) / 180)
-    )
-    ctx.translate(-width / 2, -height / 2)
+  
+  canvas.width = width
+  canvas.height = height
+  
+  // 清空画布
+  ctx.clearRect(0, 0, width, height)
+  
+  // 如果没有旋转，直接绘制原图
+  if (rotateX === 0 && rotateY === 0 && rotateZ === 0) {
     ctx.drawImage(img, 0, 0, width, height)
-    ctx.restore()
-    
     return canvas.toDataURL('image/png')
   }
+  
+  // 获取源图像数据
+  const tempCanvas = document.createElement('canvas')
+  tempCanvas.width = width
+  tempCanvas.height = height
+  const tempCtx = tempCanvas.getContext('2d')!
+  tempCtx.drawImage(img, 0, 0, width, height)
+  const sourceImageData = tempCtx.getImageData(0, 0, width, height)
+  const sourceData = sourceImageData.data
+  
+  // 创建目标图像数据
+  const destImageData = ctx.createImageData(width, height)
+  const destData = destImageData.data
+  
+  // 计算变换后的四个角
+  const transformedCorners = getTransformedCorners(width, height, rotateX, rotateY, rotateZ)
+  const sourceCorners = [[0, 0], [width, 0], [0, height], [width, height]]
+  
+  // 对每个像素进行逆变换采样
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const destIndex = (y * width + x) * 4
+      
+      // 计算源坐标
+      const sourceCoord = inversePerspectiveMapping(x, y, sourceCorners, transformedCorners)
+      
+      if (sourceCoord) {
+        let [srcX, srcY] = sourceCoord
+        
+        // 边界检查
+        if (srcX >= 0 && srcX < width - 1 && srcY >= 0 && srcY < height - 1) {
+          // 双线性插值采样
+          const x1 = Math.floor(srcX)
+          const y1 = Math.floor(srcY)
+          const x2 = x1 + 1
+          const y2 = y1 + 1
+          
+          const fx = srcX - x1
+          const fy = srcY - y1
+          
+          const getPixel = (px: number, py: number) => {
+            const idx = (py * width + px) * 4
+            return [
+              sourceData[idx],     // R
+              sourceData[idx + 1], // G
+              sourceData[idx + 2], // B
+              sourceData[idx + 3]  // A
+            ]
+          }
+          
+          const p1 = getPixel(x1, y1)
+          const p2 = getPixel(x2, y1)
+          const p3 = getPixel(x1, y2)
+          const p4 = getPixel(x2, y2)
+          
+          // 双线性插值
+          for (let c = 0; c < 4; c++) {
+            const top = p1[c] * (1 - fx) + p2[c] * fx
+            const bottom = p3[c] * (1 - fx) + p4[c] * fx
+            destData[destIndex + c] = Math.round(top * (1 - fy) + bottom * fy)
+          }
+        } else {
+          // 超出边界，设为透明
+          destData[destIndex] = 0
+          destData[destIndex + 1] = 0
+          destData[destIndex + 2] = 0
+          destData[destIndex + 3] = 0
+        }
+      } else {
+        // 无法映射，设为透明
+        destData[destIndex] = 0
+        destData[destIndex + 1] = 0
+        destData[destIndex + 2] = 0
+        destData[destIndex + 3] = 0
+      }
+    }
+  }
+  
+  // 绘制到画布
+  ctx.putImageData(destImageData, 0, 0)
+  
+  return canvas.toDataURL('image/png')
 }
 
 // 让父组件可以调用
